@@ -1,0 +1,32 @@
+[package]
+name = "mock"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2.2"
+tch = "0.7.0"
+rand = {version = "0.8", features = ["small_rng"]}
+anyhow = "1.0.43"
+thiserror = "1.0.26"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.dev]
+debug-assertions = true # enable verbose mode
+opt-level = 3
+
+[profile.release]
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = true
+panic = 'unwind'
+codegen-units = 1
+opt-level = 3
+
+[profile.test]
+opt-level = 3  
