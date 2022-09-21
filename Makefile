@@ -218,6 +218,10 @@ verifier: descriptions
 runner:  descriptions
 	GOOS=$(TARGETGOOS) GOARCH=$(TARGETGOARCH) $(GO) build $(GOTARGETFLAGS) -o ./bin/$(TARGETOS)_$(TARGETVMARCH)/syz-runner$(EXE) github.com/google/syzkaller/syz-runner
 
+mock:
+	cargo build --release --manifest-path=./tools/mock/Cargo.toml --quiet
+	cp ./tools/mock/target/release/libmock.so ./syz-manager/lib
+
 # `extract` extracts const files from various kernel sources, and may only
 # re-generate parts of files.
 extract: bin/syz-extract
@@ -381,6 +385,7 @@ test: descriptions
 
 clean:
 	rm -rf ./bin .descriptions executor/defs.h executor/syscalls.h
+	rm -rf ./tools/mock/target
 	find sys/*/gen -type f -not -name empty.go -delete
 
 # For a tupical Ubuntu/Debian distribution.
