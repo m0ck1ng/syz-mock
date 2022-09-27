@@ -469,6 +469,23 @@ func (fuzzer *Fuzzer) addCandidateInput(candidate rpctype.Candidate) {
 	})
 }
 
+func (fuzzer *Fuzzer) generateInsertCall(p *prog.Prog, insertionPoint int) int {
+	var calls []int
+	for _, c := range p.Calls {
+		calls = append(calls, c.Meta.ID)
+	}
+	ctx := &rpctype.Context{
+		Prog:           calls,
+		InsertionPoint: insertionPoint,
+	}
+	call_id := -1
+	if err := fuzzer.manager.Call("Manager.InsertCall", ctx, call_id); err != nil {
+		log.Fatalf("Manager.InsertCall call failed: %v", err)
+	}
+	fmt.Printf("fuzzer receive insert call")
+	return call_id
+}
+
 func (fuzzer *Fuzzer) deserializeInput(inp []byte) *prog.Prog {
 	p, err := fuzzer.target.Deserialize(inp, prog.NonStrict)
 	if err != nil {

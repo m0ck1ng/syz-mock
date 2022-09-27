@@ -569,6 +569,20 @@ func (r *randGen) generateCall(s *state, p *Prog, insertionPoint int) []*Call {
 	return r.generateParticularCall(s, meta)
 }
 
+func (r *randGen) generateCallWithModel(s *state, p *Prog, insertionPoint int, fg func(*Prog, int) int) []*Call {
+	var idx int
+	if idx = fg(p, insertionPoint); idx < 0 {
+		biasCall := -1
+		if insertionPoint > 0 {
+			// Choosing the base call is based on the insertion point of the new calls sequence.
+			biasCall = p.Calls[r.Intn(insertionPoint)].Meta.ID
+		}
+		idx = s.ct.choose(r.Rand, biasCall)
+	}
+	meta := r.target.Syscalls[idx]
+	return r.generateParticularCall(s, meta)
+}
+
 func (r *randGen) generateParticularCall(s *state, meta *Syscall) (calls []*Call) {
 	if meta.Attrs.Disabled {
 		panic(fmt.Sprintf("generating disabled call %v", meta.Name))

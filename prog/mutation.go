@@ -56,6 +56,43 @@ func (p *Prog) Mutate(rs rand.Source, ncalls int, ct *ChoiceTable, corpus []*Pro
 	}
 }
 
+func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg func(*Prog, int) int, corpus []*Prog) {
+	r := newRand(p.Target, rs)
+	if ncalls < len(p.Calls) {
+		ncalls = len(p.Calls)
+	}
+	ctx := &mutator{
+		p:      p,
+		r:      r,
+		ncalls: ncalls,
+		ct:     ct,
+		corpus: corpus,
+	}
+	for stop, ok := false, false; !stop; stop = ok && len(p.Calls) != 0 && r.oneOf(3) {
+		switch {
+		case r.oneOf(5):
+			// Not all calls have anything squashable,
+			// so this has lower priority in reality.
+			ok = ctx.squashAny()
+		case r.nOutOf(1, 100):
+			ok = ctx.splice()
+		case r.nOutOf(10, 31):
+			ok = ctx.insertCall()
+		case r.nOutOf(10, 31):
+			ok = ctx.insertCallWithModel(fg)
+		case r.nOutOf(10, 11):
+			ok = ctx.mutateArg()
+		default:
+			ok = ctx.removeCall()
+		}
+	}
+	p.sanitizeFix()
+	p.debugValidate()
+	if got := len(p.Calls); got < 1 || got > ncalls {
+		panic(fmt.Sprintf("bad number of calls after mutation: %v, want [1, %v]", got, ncalls))
+	}
+}
+
 // Internal state required for performing mutations -- currently this matches
 // the arguments passed to Mutate().
 type mutator struct {
@@ -142,6 +179,25 @@ func (ctx *mutator) insertCall() bool {
 	}
 	s := analyze(ctx.ct, ctx.corpus, p, c)
 	calls := r.generateCall(s, p, idx)
+	p.insertBefore(c, calls)
+	for len(p.Calls) > ctx.ncalls {
+		p.RemoveCall(idx)
+	}
+	return true
+}
+
+func (ctx *mutator) insertCallWithModel(fg func(*Prog, int) int) bool {
+	p, r := ctx.p, ctx.r
+	if len(p.Calls) >= ctx.ncalls {
+		return false
+	}
+	idx := r.biasedRand(len(p.Calls)+1, 5)
+	var c *Call
+	if idx < len(p.Calls) {
+		c = p.Calls[idx]
+	}
+	s := analyze(ctx.ct, ctx.corpus, p, c)
+	calls := r.generateCallWithModel(s, p, idx, fg)
 	p.insertBefore(c, calls)
 	for len(p.Calls) > ctx.ncalls {
 		p.RemoveCall(idx)

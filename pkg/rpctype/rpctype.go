@@ -22,6 +22,11 @@ type Input struct {
 	RawCover []uint32
 }
 
+type Context struct {
+	Prog           []int
+	InsertionPoint int
+}
+
 type Candidate struct {
 	Prog      []byte
 	Minimized bool

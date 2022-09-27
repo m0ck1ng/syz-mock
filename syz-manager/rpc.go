@@ -62,6 +62,10 @@ type RPCManagerView interface {
 	newInput(inp rpctype.Input, sign signal.Signal) bool
 	candidateBatch(size int) []rpctype.Candidate
 	rotateCorpus() bool
+
+	loadModel(string, uint)
+	checkModel() bool
+	mutateWithModel([]int, int) int
 }
 
 func startRPCServer(mgr *Manager) (*RPCServer, error) {
@@ -367,6 +371,18 @@ func (serv *RPCServer) Poll(a *rpctype.PollArgs, r *rpctype.PollRes) error {
 	}
 	log.Logf(4, "poll from %v: candidates=%v inputs=%v maxsignal=%v",
 		a.Name, len(r.Candidates), len(r.NewInputs), len(r.MaxSignal.Elems))
+	return nil
+}
+
+func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *int) error {
+	serv.mu.Lock()
+	defer serv.mu.Unlock()
+
+	if !serv.mgr.checkModel() {
+		return fmt.Errorf("model not exists")
+	}
+	*r = serv.mgr.mutateWithModel(ctx.Prog, ctx.InsertionPoint)
+	fmt.Printf("manager send insert call")
 	return nil
 }
 

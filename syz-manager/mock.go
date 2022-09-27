@@ -19,7 +19,7 @@ func DefaultModel() *Model_t {
 	return model
 }
 
-func NewModel(path string, device_id uint32) *Model_t {
+func NewModel(path string, device_id uint) *Model_t {
 	path_c := C.CString(path)
 	defer C.free(unsafe.Pointer(path_c))
 	model := C.model_new(path_c, C.uint(device_id))
@@ -32,18 +32,19 @@ func LoadModel(model *Model_t, path string, device_id uint) {
 	C.model_load(model, path_c, C.uint(device_id))
 }
 
-func Generate(model *Model_t, calls []uint) int {
-	calls_ptr := (*C.uint)(unsafe.Pointer(&calls[0]))
+func Generate(model *Model_t, calls []int) int {
+	calls_ptr := (*C.int)(unsafe.Pointer(&calls[0]))
 	return (int)(C.model_gen(model, calls_ptr, C.uint(len(calls))))
 }
 
-func Mutate(model *Model_t, calls []uint, idx uint) int {
-	calls_ptr := (*C.uint)(unsafe.Pointer(&calls[0]))
-	return (int)(C.model_mutate(model, calls_ptr, C.uint(len(calls)), C.uint(idx)))
+func Mutate(model *Model_t, calls []int, idx int) int {
+	calls_ptr := (*C.int)(unsafe.Pointer(&calls[0]))
+	return (int)(C.model_mutate(model, calls_ptr, C.uint(len(calls)), C.int(idx)))
 }
 
-func ModelExists(model *Model_t) uint {
-	return (uint)(C.model_exists(model))
+func ModelExists(model *Model_t) bool {
+	ret := (uint)(C.model_exists(model))
+	return (ret == 1)
 }
 
 // func main() {
