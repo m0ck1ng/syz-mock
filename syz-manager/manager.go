@@ -199,7 +199,17 @@ func RunManager(cfg *mgrconfig.Config) {
 		saturatedCalls:   make(map[string]bool),
 	}
 
-	mgr.newModel("/home/workdir/syscall_model_jit_best.pt", 1)
+	mgr.defaultModel()
+	// mgr.newModel("/home/workdir/syscall_model_jit_best.pt", 1)
+	// dumpSyscalls(mgr.cfg.Target.Syscalls)
+	go func() {
+		for {
+			time.Sleep(3 * time.Minute)
+			modelPath := trainModel(mgr.cfg.Syzkaller, mgr.cfg.Workdir)
+			mgr.loadModel(modelPath, 1)
+			log.Logf(0, "model trained & updated")
+		}
+	}()
 
 	mgr.preloadCorpus()
 	mgr.initStats() // Initializes prometheus variables.
@@ -1389,22 +1399,6 @@ func (mgr *Manager) checkUsedFiles() {
 				f, mod, stat.ModTime())
 		}
 	}
-}
-
-func (mgr *Manager) newModel(path string, device_id uint) {
-	mgr.relModel = NewModel(path, device_id)
-}
-
-func (mgr *Manager) loadModel(path string, device_id uint) {
-	LoadModel(mgr.relModel, path, device_id)
-}
-
-func (mgr *Manager) checkModel() bool {
-	return ModelExists(mgr.relModel)
-}
-
-func (mgr *Manager) mutateWithModel(calls []int, idx int) int {
-	return Mutate(mgr.relModel, calls, idx)
 }
 
 func (mgr *Manager) dashboardReporter() {
