@@ -56,7 +56,7 @@ func (p *Prog) Mutate(rs rand.Source, ncalls int, ct *ChoiceTable, corpus []*Pro
 	}
 }
 
-func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg func(*Prog, int) int, corpus []*Prog) {
+func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg func(*Prog, int) int, corpus []*Prog) int {
 	r := newRand(p.Target, rs)
 	if ncalls < len(p.Calls) {
 		ncalls = len(p.Calls)
@@ -68,6 +68,7 @@ func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg fu
 		ct:     ct,
 		corpus: corpus,
 	}
+	choice := -1
 	for stop, ok := false, false; !stop; stop = ok && len(p.Calls) != 0 && r.oneOf(3) {
 		switch {
 		case r.oneOf(5):
@@ -77,9 +78,13 @@ func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg fu
 		case r.nOutOf(1, 100):
 			ok = ctx.splice()
 		case r.nOutOf(10, 31):
-			ok = ctx.insertCall()
-		case r.nOutOf(10, 31):
-			ok = ctx.insertCallWithModel(fg)
+			if r.bin() {
+				ok = ctx.insertCall()
+				choice = 1
+			} else {
+				ok = ctx.insertCallWithModel(fg)
+				choice = 2
+			}
 		case r.nOutOf(10, 11):
 			ok = ctx.mutateArg()
 		default:
@@ -91,6 +96,7 @@ func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg fu
 	if got := len(p.Calls); got < 1 || got > ncalls {
 		panic(fmt.Sprintf("bad number of calls after mutation: %v, want [1, %v]", got, ncalls))
 	}
+	return choice
 }
 
 // Internal state required for performing mutations -- currently this matches
