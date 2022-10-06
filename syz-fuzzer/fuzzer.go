@@ -478,11 +478,11 @@ func (fuzzer *Fuzzer) generateInsertCall(p *prog.Prog, insertionPoint int) int {
 		Prog:           calls,
 		InsertionPoint: insertionPoint,
 	}
-	call_id := -1
-	if err := fuzzer.manager.Call("Manager.InsertCall", ctx, call_id); err != nil {
+	r := &rpctype.ModelRes{}
+	if err := fuzzer.manager.Call("Manager.InsertCall", ctx, r); err != nil {
 		log.Logf(0, "Manager.InsertCall call failed: %v", err)
 	}
-	return call_id
+	return r.Call
 }
 
 func (fuzzer *Fuzzer) deserializeInput(inp []byte) *prog.Prog {

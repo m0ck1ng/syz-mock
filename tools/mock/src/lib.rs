@@ -18,6 +18,9 @@ pub struct Model {
     device: Option<Device>,
 }
 
+const NUM_LAYERS:i64=2;
+const HIDDEN_DIM:i64=128;
+
 impl Model {
     pub fn new<P: AsRef<std::path::Path>>(model_path: P, device_id: usize) -> Self {
         let mut device = Device::Cpu;
@@ -44,11 +47,34 @@ impl Model {
             None
         }
         else {
-            let length = Tensor::of_slice(&[inputs.len() as u8]).to_device(self.device.unwrap());
-            let inputs_i32 = inputs.into_iter().map(|i| *i as i32).collect::<Vec<i32>>();
-            let inputs_i32 = Tensor::stack(&[Tensor::of_slice(&inputs_i32)], 0).to_device(self.device.unwrap());
-            let outputs = self.model.as_ref().unwrap().forward_ts(&[inputs_i32, length]);
-            Some(outputs.unwrap())
+            // begin
+            let length_ival = tch::IValue::Tensor(Tensor::of_slice(&[inputs.len() as u8]).to_device(self.device.unwrap()));
+            let inputs = inputs.into_iter().map(|i| *i as i32).collect::<Vec<i32>>();
+            let inputs_ival = tch::IValue::Tensor(Tensor::stack(&[Tensor::of_slice(&inputs)], 0).to_device(self.device.unwrap()));
+            let h0 = tch::IValue::Tensor(Tensor::zeros(&[NUM_LAYERS*2, 1, HIDDEN_DIM],(tch::Kind::Float, self.device.unwrap())));
+            let output1 = self.model.as_ref().unwrap().forward_is(&[inputs_ival, length_ival, h0]).unwrap();
+            let (_, hidden) = match output1 {
+                tch::IValue::Tuple(ivalues) => match &ivalues[..] {
+                    [tch::IValue::Tensor(t1), tch::IValue::Tensor(t2)] => (t1.shallow_clone(), t2.shallow_clone()),
+                    _ => panic!("unexpected output {:?}", ivalues),
+                },
+                _ => panic!("unexpected output {:?}", output1),
+            };
+            // println!("hidden : {:?}", hidden);
+            // last word
+            let last_word = Tensor::of_slice(&[inputs.last().copied().unwrap() as i64]).to_device(self.device.unwrap());
+            let last_word = tch::IValue::Tensor(Tensor::stack(&[last_word], 0).to_device(self.device.unwrap()));
+            let length = tch::IValue::Tensor(Tensor::of_slice(&[1]).to_device(self.device.unwrap()));
+            let hidden = tch::IValue::Tensor(hidden);
+            let output2 = self.model.as_ref().unwrap().forward_is(&[last_word, length, hidden]).unwrap();
+            let (output, _) = match output2 {
+                tch::IValue::Tuple(ivalues) => match &ivalues[..] {
+                    [tch::IValue::Tensor(t1), tch::IValue::Tensor(t2)] => (t1.shallow_clone(), t2.shallow_clone()),
+                    _ => panic!("unexpected output {:?}", ivalues),
+                },
+                _ => panic!("unexpected output {:?}", output2),
+            };
+            Some(output)
         }
     }
 
@@ -85,8 +111,8 @@ pub fn mutate(model: &Model, calls: &[u32], rng: &mut RngType, idx: usize) -> i3
     // so it require to cast between sid and word_id
     let topk = 10;
     let mut prev_calls: Vec<SyscallId> = calls[..idx].iter().map(|c| *c as usize+3).collect();
-    // "2" refer to Start-Of-Sentence(SOS)
-    prev_calls.insert(0, 2);
+    // "1" refer to Start-Of-Sentence(SOS)
+    prev_calls.insert(0, 1);
     let prev_pred = model.eval(&prev_calls).unwrap();
     let mut candidates = top_k(&prev_pred, topk);
 
@@ -94,8 +120,8 @@ pub fn mutate(model: &Model, calls: &[u32], rng: &mut RngType, idx: usize) -> i3
     // cast between sid and word_id
     if idx != calls.len() {
         let mut back_calls: Vec<SyscallId> = calls[idx..].iter().rev().map(|c| *c as usize+3).collect();
-        // "3" refer to End-of-Sentence(EOS)
-        back_calls.insert(0, 3);
+        // "2" refer to End-of-Sentence(EOS)
+        back_calls.insert(0, 2);
         let back_pred = model.eval(&back_calls).unwrap();
         candidates.extend(top_k(&back_pred, topk));
     }
@@ -232,12 +258,13 @@ mod tests {
     fn test_eval_model() {
         let mut device = Device::Cpu;
         if tch::Cuda::is_available() {
-            device = Device::Cuda(0);
+            device = Device::Cuda(1);
         }
         println!("{:?}", device);
         assert!(device.is_cuda());
-        let model = Model::new("/home/model_manager/api/lang_model/checkpoints/syscall_model_jit_best.pt", 0);
-        let out = model.eval(&[0,1,2]).unwrap().to(device);
-        assert_eq!(out.size(), vec![3,4130])
+        let model = Model::new("/home/model_manager/api/lang_model/checkpoints/syscall_model_jit_best.pt", 1);
+        let out = model.eval(&[0, 3920, 3276]).unwrap().to(device);
+        println!("{:?}", out);
+        assert_eq!(out.size(), vec![1,4284])
     }
 }

@@ -203,7 +203,12 @@ func (ctx *mutator) insertCallWithModel(fg func(*Prog, int) int) bool {
 		c = p.Calls[idx]
 	}
 	s := analyze(ctx.ct, ctx.corpus, p, c)
-	calls := r.generateCallWithModel(s, p, idx, fg)
+	var calls []*Call
+	if idx > 0 && len(p.Calls) > 0 {
+		calls = r.generateCallWithModel(s, p, idx, fg)
+	} else {
+		calls = r.generateCall(s, p, idx)
+	}
 	p.insertBefore(c, calls)
 	for len(p.Calls) > ctx.ncalls {
 		p.RemoveCall(idx)

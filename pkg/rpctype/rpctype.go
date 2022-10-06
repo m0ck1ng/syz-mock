@@ -27,6 +27,10 @@ type Context struct {
 	InsertionPoint int
 }
 
+type ModelRes struct {
+	Call int
+}
+
 type Candidate struct {
 	Prog      []byte
 	Minimized bool

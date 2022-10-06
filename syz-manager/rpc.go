@@ -374,15 +374,15 @@ func (serv *RPCServer) Poll(a *rpctype.PollArgs, r *rpctype.PollRes) error {
 	return nil
 }
 
-func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *int) error {
+func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *rpctype.ModelRes) error {
 	serv.mu.Lock()
 	defer serv.mu.Unlock()
 
 	if !serv.mgr.checkModel() {
 		return fmt.Errorf("model not exists")
 	}
-	*r = serv.mgr.mutateWithModel(ctx.Prog, ctx.InsertionPoint)
-	fmt.Printf("manager send insert call")
+	log.Logf(2, "receive insertCall rpc")
+	r.Call = serv.mgr.mutateWithModel(ctx.Prog, ctx.InsertionPoint)
 	return nil
 }
 
