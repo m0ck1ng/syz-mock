@@ -93,9 +93,16 @@ func (proc *Proc) loop() {
 			// Mutate an existing prog.
 			p := fuzzerSnapshot.chooseProgram(proc.rnd).Clone()
 			// p.Mutate(proc.rnd, prog.RecommendedCalls, ct, fuzzerSnapshot.corpus)
-			p.MutateWithMock(proc.rnd, prog.RecommendedCalls, proc.fuzzer.choiceTable, proc.fuzzer.generateInsertCall, fuzzerSnapshot.corpus)
+			choice := p.MutateWithMock(proc.rnd, prog.RecommendedCalls, proc.fuzzer.choiceTable, proc.fuzzer.generateInsertCall, fuzzerSnapshot.corpus, &proc.fuzzer.sch)
 			log.Logf(1, "#%v: mutated", proc.pid)
-			proc.executeAndCollide(proc.execOpts, p, ProgNormal, StatFuzz)
+			// proc.executeAndCollide(proc.execOpts, p, ProgNormal, StatFuzz)
+			newSignal := proc.executeAndCollideMock(proc.execOpts, p, ProgNormal, StatFuzz)
+			if choice == 0 || choice == 1 {
+				proc.fuzzer.sch.IncExecTotal(uint(choice))
+				if newSignal {
+					proc.fuzzer.sch.IncIntTotal(uint(choice))
+				}
+			}
 		}
 	}
 }
@@ -218,9 +225,17 @@ func (proc *Proc) smashInput(item *WorkSmash) {
 	for i := 0; i < 100; i++ {
 		p := item.p.Clone()
 		// p.Mutate(proc.rnd, prog.RecommendedCalls, proc.fuzzer.choiceTable, fuzzerSnapshot.corpus)
-		p.MutateWithMock(proc.rnd, prog.RecommendedCalls, proc.fuzzer.choiceTable, proc.fuzzer.generateInsertCall, fuzzerSnapshot.corpus)
+		choice := p.MutateWithMock(proc.rnd, prog.RecommendedCalls, proc.fuzzer.choiceTable,
+			proc.fuzzer.generateInsertCall, fuzzerSnapshot.corpus, &proc.fuzzer.sch)
 		log.Logf(1, "#%v: smash mutated", proc.pid)
-		proc.executeAndCollide(proc.execOpts, p, ProgNormal, StatSmash)
+		// proc.executeAndCollide(proc.execOpts, p, ProgNormal, StatSmash)
+		newSignal := proc.executeAndCollideMock(proc.execOpts, p, ProgNormal, StatSmash)
+		if choice == 0 || choice == 1 {
+			proc.fuzzer.sch.IncExecTotal(uint(choice))
+			if newSignal {
+				proc.fuzzer.sch.IncIntTotal(uint(choice))
+			}
+		}
 	}
 }
 
@@ -268,6 +283,21 @@ func (proc *Proc) execute(execOpts *ipc.ExecOpts, p *prog.Prog, flags ProgTypes,
 	return info
 }
 
+func (proc *Proc) executeMock(execOpts *ipc.ExecOpts, p *prog.Prog, flags ProgTypes, stat Stat) bool {
+	info := proc.executeRaw(execOpts, p, stat)
+	if info == nil {
+		return false
+	}
+	calls, extra := proc.fuzzer.checkNewSignal(p, info)
+	for _, callIndex := range calls {
+		proc.enqueueCallTriage(p, flags, callIndex, info.Calls[callIndex])
+	}
+	if extra {
+		proc.enqueueCallTriage(p, flags, -1, info.Extra)
+	}
+	return len(calls) > 0
+}
+
 func (proc *Proc) enqueueCallTriage(p *prog.Prog, flags ProgTypes, callIndex int, info ipc.CallInfo) {
 	// info.Signal points to the output shmem region, detach it before queueing.
 	info.Signal = append([]uint32{}, info.Signal...)
@@ -293,6 +323,20 @@ func (proc *Proc) executeAndCollide(execOpts *ipc.ExecOpts, p *prog.Prog, flags 
 	for i := 0; i < collideIterations; i++ {
 		proc.executeRaw(proc.execOptsCollide, proc.randomCollide(p), StatCollide)
 	}
+}
+
+func (proc *Proc) executeAndCollideMock(execOpts *ipc.ExecOpts, p *prog.Prog, flags ProgTypes, stat Stat) bool {
+	newSignal := proc.executeMock(execOpts, p, flags, stat)
+
+	if proc.execOptsCollide.Flags&ipc.FlagThreaded == 0 {
+		// We cannot collide syscalls without being in the threaded mode.
+		return newSignal
+	}
+	const collideIterations = 2
+	for i := 0; i < collideIterations; i++ {
+		proc.executeRaw(proc.execOptsCollide, proc.randomCollide(p), StatCollide)
+	}
+	return newSignal
 }
 
 func (proc *Proc) randomCollide(origP *prog.Prog) *prog.Prog {

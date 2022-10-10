@@ -45,4 +45,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	honnef.co/go/tools v0.3.3 // indirect
 	mvdan.cc/unparam v0.0.0-20220706161116-678bad134442 // indirect
+	github.com/mroth/weightedrand v0.4.1
 )

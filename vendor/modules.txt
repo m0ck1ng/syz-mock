@@ -349,6 +349,9 @@ github.com/mitchellh/mapstructure
 github.com/moricho/tparallel
 github.com/moricho/tparallel/pkg/ssafunc
 github.com/moricho/tparallel/pkg/ssainstr
+# github.com/mroth/weightedrand v0.4.1
+## explicit
+github.com/mroth/weightedrand
 # github.com/nakabonne/nestif v0.3.1
 github.com/nakabonne/nestif
 # github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354

@@ -63,6 +63,8 @@ type Fuzzer struct {
 
 	checkResult *rpctype.CheckArgs
 	logMu       sync.Mutex
+
+	sch prog.Sched
 }
 
 type FuzzerSnapshot struct {
@@ -300,6 +302,24 @@ func main() {
 		go proc.loop()
 	}
 
+	go func() {
+		for {
+			if !fuzzer.sch.GetModelFlag() {
+				fuzzer.sch.SetModelFlag(fuzzer.checkModel())
+				// fuzzer.checkModel()
+			}
+			if fuzzer.sch.GetModelFlag() {
+				fuzzer.sch.Reset()
+				time.Sleep(15 * time.Minute)
+				fuzzer.sch.UpdateWeights()
+				fuzzer.sendMockInfoToManager()
+				time.Sleep(5 * time.Minute)
+			} else {
+				time.Sleep(15 * time.Minute)
+			}
+		}
+	}()
+
 	fuzzer.pollLoop()
 }
 
@@ -478,11 +498,32 @@ func (fuzzer *Fuzzer) generateInsertCall(p *prog.Prog, insertionPoint int) int {
 		Prog:           calls,
 		InsertionPoint: insertionPoint,
 	}
-	r := &rpctype.ModelRes{}
+	r := &rpctype.ModelPreRes{}
 	if err := fuzzer.manager.Call("Manager.InsertCall", ctx, r); err != nil {
 		log.Logf(0, "Manager.InsertCall call failed: %v", err)
 	}
 	return r.Call
+}
+
+func (fuzzer *Fuzzer) checkModel() bool {
+	a := &rpctype.ModelCheckArg{}
+	r := &rpctype.ModelCheckRes{}
+	if err := fuzzer.manager.Call("Manager.CheckModel", a, r); err != nil {
+		log.Logf(0, "Manager.CheckModel failed: %v", err)
+	}
+	return r.ModelExists
+}
+
+func (fuzzer *Fuzzer) sendMockInfoToManager() {
+	a := &rpctype.MockMutateInfo{
+		IntTotal: fuzzer.sch.IntTotal[0],
+		IntTotalMock: fuzzer.sch.IntTotal[1],
+		ExecTotal: fuzzer.sch.ExecTotal[0],
+		ExecTotalMock: fuzzer.sch.ExecTotal[1],
+	}
+	if err := fuzzer.manager.Call("Manager.CheckModel", a, nil); err != nil {
+		log.Logf(0, "Manager.CheckModel failed: %v", err)
+	}
 }
 
 func (fuzzer *Fuzzer) deserializeInput(inp []byte) *prog.Prog {

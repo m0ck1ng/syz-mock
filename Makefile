@@ -388,7 +388,10 @@ test: descriptions
 clean:
 	rm -rf ./bin .descriptions executor/defs.h executor/syscalls.h
 	find sys/*/gen -type f -not -name empty.go -delete
-# rm -rf ./tools/mock/target
+
+clean_mock:
+	rm -rf ./tools/mock/target
+	rm -r ./syz-manager/lib/libmock.so
 # For a tupical Ubuntu/Debian distribution.
 # We use "|| true" for apt-get install because packages are all different on different distros.
 # Also see tools/syz-env for container approach.

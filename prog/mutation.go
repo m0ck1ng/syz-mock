@@ -56,7 +56,7 @@ func (p *Prog) Mutate(rs rand.Source, ncalls int, ct *ChoiceTable, corpus []*Pro
 	}
 }
 
-func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg func(*Prog, int) int, corpus []*Prog) int {
+func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg func(*Prog, int) int, corpus []*Prog, sch *Sched) int {
 	r := newRand(p.Target, rs)
 	if ncalls < len(p.Calls) {
 		ncalls = len(p.Calls)
@@ -78,12 +78,14 @@ func (p *Prog) MutateWithMock(rs rand.Source, ncalls int, ct *ChoiceTable, fg fu
 		case r.nOutOf(1, 100):
 			ok = ctx.splice()
 		case r.nOutOf(10, 31):
-			if r.bin() {
+			choice = sch.Choice()
+			switch choice {
+			case 0:
 				ok = ctx.insertCall()
-				choice = 1
-			} else {
+			case 1:
 				ok = ctx.insertCallWithModel(fg)
-				choice = 2
+			default:
+				ok = ctx.insertCall()
 			}
 		case r.nOutOf(10, 11):
 			ok = ctx.mutateArg()

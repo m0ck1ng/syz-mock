@@ -27,8 +27,24 @@ type Context struct {
 	InsertionPoint int
 }
 
-type ModelRes struct {
+type ModelPreRes struct {
 	Call int
+}
+
+type ModelCheckArg struct {
+	Empty int
+}
+
+type ModelCheckRes struct {
+	ModelExists bool
+}
+
+type MockMutateInfo struct {
+	IntTotal      uint32
+	ExecTotal     uint32
+	IntTotalMock  uint32
+	ExecTotalMock uint32
+	Choice        int
 }
 
 type Candidate struct {

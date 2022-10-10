@@ -374,7 +374,7 @@ func (serv *RPCServer) Poll(a *rpctype.PollArgs, r *rpctype.PollRes) error {
 	return nil
 }
 
-func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *rpctype.ModelRes) error {
+func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *rpctype.ModelPreRes) error {
 	serv.mu.Lock()
 	defer serv.mu.Unlock()
 
@@ -383,6 +383,25 @@ func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *rpctype.ModelRes) err
 	}
 	log.Logf(2, "receive insertCall rpc")
 	r.Call = serv.mgr.mutateWithModel(ctx.Prog, ctx.InsertionPoint)
+	return nil
+}
+
+func (serv *RPCServer) CheckModel(a *int, r *rpctype.ModelCheckRes) error {
+	serv.mu.Lock()
+	defer serv.mu.Unlock()
+
+	log.Logf(2, "receive CheckModel rpc")
+	r.ModelExists = serv.mgr.checkModel()
+	return nil
+}
+
+func (serv *RPCServer) MockInfo(a *rpctype.MockMutateInfo, r *int) error {
+	serv.mu.Lock()
+	defer serv.mu.Unlock()
+
+	log.Logf(2, "receive MockInfo rpc")
+	log.Logf(0, "original mutate: int / total, %v / %v", a.IntTotal, a.ExecTotal)
+	log.Logf(0, "mock mutate: int / total, %v / %v", a.IntTotalMock, a.ExecTotalMock)
 	return nil
 }
 
