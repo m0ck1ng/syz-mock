@@ -516,13 +516,13 @@ func (fuzzer *Fuzzer) checkModel() bool {
 
 func (fuzzer *Fuzzer) sendMockInfoToManager() {
 	a := &rpctype.MockMutateInfo{
-		IntTotal: fuzzer.sch.IntTotal[0],
-		IntTotalMock: fuzzer.sch.IntTotal[1],
-		ExecTotal: fuzzer.sch.ExecTotal[0],
+		IntTotal:      fuzzer.sch.IntTotal[0],
+		IntTotalMock:  fuzzer.sch.IntTotal[1],
+		ExecTotal:     fuzzer.sch.ExecTotal[0],
 		ExecTotalMock: fuzzer.sch.ExecTotal[1],
 	}
-	if err := fuzzer.manager.Call("Manager.CheckModel", a, nil); err != nil {
-		log.Logf(0, "Manager.CheckModel failed: %v", err)
+	if err := fuzzer.manager.Call("Manager.MockInfo", a, nil); err != nil {
+		log.Logf(0, "Manager.sendMockInfoToManager failed: %v", err)
 	}
 }
 

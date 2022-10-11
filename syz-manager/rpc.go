@@ -386,7 +386,7 @@ func (serv *RPCServer) InsertCall(ctx *rpctype.Context, r *rpctype.ModelPreRes) 
 	return nil
 }
 
-func (serv *RPCServer) CheckModel(a *int, r *rpctype.ModelCheckRes) error {
+func (serv *RPCServer) CheckModel(a *rpctype.ModelCheckArg, r *rpctype.ModelCheckRes) error {
 	serv.mu.Lock()
 	defer serv.mu.Unlock()
 
