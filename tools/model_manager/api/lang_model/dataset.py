@@ -44,17 +44,23 @@ class SysDataset(Dataset):
         self.seq_len = []
         self.corpus = []
         if corpus and vocab:
-            self.corpus = np.array([self._sent2data(sent) for sent in corpus], dtype=np.int)
+            for sent in corpus:
+                sent_int = self._sent2data(sent)
+                if sent_int:
+                    self.corpus.append(sent_int)
+            self.corpus = np.array(self.corpus, dtype=np.int)
             self.seq_len = np.array(self.seq_len, dtype=np.int)
-
     
     def _sent2data(self, sent):
-        self.seq_len.append(min(len(sent), self.max_len))
         if len(sent) > self.max_len:
             sent = ["SOS"]+sent[:self.max_len]+["EOS"]
         else:
             sent = ["SOS"]+sent+['PAD' for _ in range(self.max_len-len(sent))]+["EOS"]
-        data = [self.vocab.word2idx[word] for word in sent]
+        try:
+            data = [self.vocab.word2idx[word] for word in sent]
+            self.seq_len.append(min(len(sent), self.max_len))
+        except KeyError:
+            data = None
         return data
     
     def __getitem__(self, idx):

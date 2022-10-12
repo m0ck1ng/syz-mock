@@ -23,6 +23,7 @@ def model_train(request):
         now_time = datetime.datetime.now()
         syzdir = request.POST.get("syzdir", None)
         workdir = request.POST.get("workdir", None)
+        pretrain = request.POST.get("workdir", "false")
 
         if not syzdir or not workdir \
             or not os.path.isdir(syzdir) \
@@ -42,9 +43,11 @@ def model_train(request):
         syscalls = read_syscalls(f"{settings.BASE_DIR}/api/lang_model/data/targetSyscalls")
         corpus = read_corpus(corpus_dir)
 
+        # syzcorpus_dir = '/data5/corpus/syzkaller_corpus'
+        # corpus = read_corpus(syzcorpus_dir)
+
         vocab = Vocab()
         vocab.addDict(syscalls)
-        vocab.addCorpus(corpus)
         sys_dataset = SysDataset(corpus, vocab)
 
         train_size =  int(0.9*len(sys_dataset))
@@ -62,6 +65,10 @@ def model_train(request):
         hidden_dim = 128
 
         model = RelationModel(hidden_dim, embed_dim, len(vocab), device).to(device)
+        if pretrain == "true":
+            pretrain_model_path = f"{settings.BASE_DIR}/api/lang_model/data/pretrain_model"
+            model.load_state_dict(torch.load(pretrain_model_path))
+
         optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss()
         
