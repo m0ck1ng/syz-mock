@@ -23,7 +23,7 @@ def model_train(request):
         now_time = datetime.datetime.now()
         syzdir = request.POST.get("syzdir", None)
         workdir = request.POST.get("workdir", None)
-        pretrain = request.POST.get("workdir", "false")
+        # pretrain = request.POST.get("pretrain", "false")
 
         if not syzdir or not workdir \
             or not os.path.isdir(syzdir) \
@@ -39,18 +39,22 @@ def model_train(request):
         if ret.returncode != 0:
             print(f"error: {ret}")
             return HttpResponse("error: fail to unpack corpus")
-        
+       
+        print(f"finish unpack corpus: {datetime.datetime.now() - now_time}")
         syscalls = read_syscalls(f"{settings.BASE_DIR}/api/lang_model/data/targetSyscalls")
         corpus = read_corpus(corpus_dir)
+        print(corpus[0])
 
         # syzcorpus_dir = '/data5/corpus/syzkaller_corpus'
         # corpus = read_corpus(syzcorpus_dir)
 
         vocab = Vocab()
         vocab.addDict(syscalls)
+        print(f"vocab size: {len(vocab)}")
         sys_dataset = SysDataset(corpus, vocab)
+        print(f"corpus size: {len(sys_dataset)}")
 
-        train_size =  int(0.9*len(sys_dataset))
+        train_size =  int(0.85*len(sys_dataset))
         test_size = len(sys_dataset)-train_size
         train_dataset, test_dataset = torch.utils.data.random_split(sys_dataset, [train_size, test_size])
 
@@ -60,14 +64,14 @@ def model_train(request):
         device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
         num_epoch = 50
-        lr = 0.001
+        lr = 0.0005
         embed_dim = 64
         hidden_dim = 128
 
         model = RelationModel(hidden_dim, embed_dim, len(vocab), device).to(device)
-        if pretrain == "true":
-            pretrain_model_path = f"{settings.BASE_DIR}/api/lang_model/data/pretrain_model"
-            model.load_state_dict(torch.load(pretrain_model_path))
+        # if pretrain == "true":
+        #     pretrain_model_path = f"{settings.BASE_DIR}/api/lang_model/data/pretrain_model"
+        #     model.load_state_dict(torch.load(pretrain_model_path))
 
         optimizer = optim.Adam(model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss()
