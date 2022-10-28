@@ -40,7 +40,6 @@ def model_train(request):
             print(f"error: {ret}")
             return HttpResponse("error: fail to unpack corpus")
        
-        print(f"finish unpack corpus: {datetime.datetime.now() - now_time}")
         syscalls = read_syscalls(f"{settings.BASE_DIR}/api/lang_model/data/targetSyscalls")
         corpus = read_corpus(corpus_dir)
         print(corpus[0])
@@ -64,7 +63,7 @@ def model_train(request):
         device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
         num_epoch = 50
-        lr = 0.0005
+        lr = 0.001
         embed_dim = 64
         hidden_dim = 128
 
