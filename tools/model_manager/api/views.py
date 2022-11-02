@@ -42,7 +42,6 @@ def model_train(request):
        
         syscalls = read_syscalls(f"{settings.BASE_DIR}/api/lang_model/data/targetSyscalls")
         corpus = read_corpus(corpus_dir)
-        print(corpus[0])
 
         # syzcorpus_dir = '/data5/corpus/syzkaller_corpus'
         # corpus = read_corpus(syzcorpus_dir)
@@ -60,7 +59,7 @@ def model_train(request):
         train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
 
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         num_epoch = 50
         lr = 0.001

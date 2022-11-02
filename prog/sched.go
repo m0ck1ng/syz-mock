@@ -38,7 +38,7 @@ func (sch *Sched) Reset() {
 		atomic.StoreUint32(&sch.IntTotal[i], 0)
 		atomic.StoreUint32(&sch.weights[i], 5)
 	}
-	atomic.StoreUint32(&sch.weights[INSERT], 10)
+	// atomic.StoreUint32(&sch.weights[INSERT], 10)
 }
 
 func (sch *Sched) UpdateWeights() {

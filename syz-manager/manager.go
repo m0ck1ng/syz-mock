@@ -204,9 +204,9 @@ func RunManager(cfg *mgrconfig.Config) {
 	// dumpSyscalls(mgr.cfg.Target.Syscalls)
 	go func() {
 		for {
-			time.Sleep(60 * time.Minute)
+			time.Sleep(4 * 60 * time.Minute)
 			modelPath := trainModel(mgr.cfg.Syzkaller, mgr.cfg.Workdir)
-			mgr.loadModel(modelPath, 1)
+			mgr.loadModel(modelPath, 0)
 			log.Logf(0, "model trained & updated")
 		}
 	}()
